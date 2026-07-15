@@ -98,6 +98,13 @@ class _SysMetrics:
         self._running = True
         t = threading.Thread(target=self._loop, daemon=True)
         t.start()
+         def _loop(self):
+        while self._running:
+            try:
+                self._update()
+            except Exception:
+                pass
+            time.sleep(1.5)
 
 
     def _update(self):
