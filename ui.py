@@ -81,4 +81,22 @@ class C:
     WHITE     = "#d8f8ff"
     DARK      = "#000d14"
     BAR_BG    = "#011520"
+    
+def qcol(h: str, a: int = 255) -> QColor:
+    c = QColor(h); c.setAlpha(a); return c
+
+class _SysMetrics:
+    def __init__(self):
+        self.cpu  = 0.0
+        self.mem  = 0.0
+        self.net  = 0.0   
+        self.gpu  = -1.0  
+        self.tmp  = -1.0  
+        self._lock = threading.Lock()
+        self._last_net = psutil.net_io_counters()
+        self._last_net_t = time.time()
+        self._running = True
+        t = threading.Thread(target=self._loop, daemon=True)
+        t.start()
+
 
