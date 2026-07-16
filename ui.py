@@ -166,4 +166,17 @@ class _SysMetrics:
                                 pass
             except Exception:
                 pass
+                  # Intel GPU (Linux)
+            try:
+                r = subprocess.run(
+                    ["intel_gpu_top", "-J", "-s", "500"],
+                    capture_output=True, text=True, timeout=1
+                )
+                if r.returncode == 0 and "Render/3D" in r.stdout:
+                    import re
+                    m = re.search(r'"busy":\s*([\d.]+)', r.stdout)
+                    if m:
+                        return float(m.group(1))
+            except Exception:
+                pass
 
