@@ -133,3 +133,18 @@ class _SysMetrics:
             self.net = net
             self.gpu = gpu
             self.tmp = tmp
+
+    def _get_gpu(self) -> float:
+        # NVIDIA GPU  vako device ko lagi
+        try:
+            r = subprocess.run(
+                ["nvidia-smi", "--query-gpu=utilization.gpu",
+                 "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=2
+            )
+            if r.returncode == 0:
+                vals = [float(v.strip()) for v in r.stdout.strip().split("\n") if v.strip()]
+                if vals:
+                    return sum(vals) / len(vals)
+        except Exception:
+            pass
