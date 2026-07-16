@@ -148,17 +148,22 @@ class _SysMetrics:
                     return sum(vals) / len(vals)
         except Exception:
             pass
-             # Intel GPU Linux ko lagi
+           
+        # AMD (Linux) ko lagi.
+        if _OS == "Linux":
             try:
                 r = subprocess.run(
-                    ["intel_gpu_top", "-J", "-s", "500"],
-                    capture_output=True, text=True, timeout=1
+                    ["rocm-smi", "--showuse", "--csv"],
+                    capture_output=True, text=True, timeout=2
                 )
-                if r.returncode == 0 and "Render/3D" in r.stdout:
-                    import re
-                    m = re.search(r'"busy":\s*([\d.]+)', r.stdout)
-                    if m:
-                        return float(m.group(1))
+                if r.returncode == 0:
+                    for line in r.stdout.strip().split("\n"):
+                        parts = line.split(",")
+                        if len(parts) >= 2:
+                            try:
+                                return float(parts[1].strip().replace("%", ""))
+                            except ValueError:
+                                pass
             except Exception:
                 pass
 
