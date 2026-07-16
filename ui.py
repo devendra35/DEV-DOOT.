@@ -196,5 +196,32 @@ class _SysMetrics:
                 pass
 
         return -1.0
+         def _get_temp(self) -> float:
+        try:
+            temps = psutil.sensors_temperatures()
+            candidates = ["coretemp", "k10temp", "cpu_thermal", "acpitz",
+                          "cpu-thermal", "zenpower", "it8688"]
+            for name in candidates:
+                if name in temps:
+                    entries = temps[name]
+                    if entries:
+                        return entries[0].current
+            for entries in temps.values():
+                if entries:
+                    return entries[0].current
+        except Exception:
+            pass
+        if _OS == "Darwin":
+            try:
+                r = subprocess.run(
+                    ["osx-cpu-temp"], capture_output=True, text=True, timeout=2
+                )
+                if r.returncode == 0:
+                    import re
+                    m = re.search(r"([\d.]+)", r.stdout)
+                    if m:
+                        return float(m.group(1))
+            except Exception:
+                pass
 
 
