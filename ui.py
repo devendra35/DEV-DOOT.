@@ -179,4 +179,22 @@ class _SysMetrics:
                         return float(m.group(1))
             except Exception:
                 pass
+                # macOS — powermetrics (GPU Engine)
+        if _OS == "Darwin":
+            try:
+                r = subprocess.run(
+                    ["sudo", "-n", "powermetrics", "-n", "1", "-i", "500",
+                     "--samplers", "gpu_power"],
+                    capture_output=True, text=True, timeout=2
+                )
+                if r.returncode == 0 and "GPU" in r.stdout:
+                    import re
+                    m = re.search(r'GPU\s+Active:\s+([\d.]+)%', r.stdout)
+                    if m:
+                        return float(m.group(1))
+            except Exception:
+                pass
+
+        return -1.0
+
 
