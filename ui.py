@@ -332,6 +332,15 @@ class HudCanvas(QWidget):
         self._pulses = [r + spd for r in self._pulses if r + spd < lim]
         if len(self._pulses) < 3 and random.random() < (0.07 if self.speaking else 0.025):
             self._pulses.append(0.0)
+            if self.speaking and random.random() < 0.28:
+            cx, cy = self.width() / 2, self.height() / 2
+            ang = random.uniform(0, 2 * math.pi)
+            r_s = fw * 0.28
+            self._particles.append([
+                cx + math.cos(ang) * r_s, cy + math.sin(ang) * r_s,
+                math.cos(ang) * random.uniform(0.9, 2.4),
+                math.sin(ang) * random.uniform(0.9, 2.4) - 0.4, 1.0,
+            ])
 
 
        
