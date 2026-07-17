@@ -250,4 +250,7 @@ class _SysMetrics:
             }
 
 
+        self.muted    = False
+        self.speaking = False
+        self.state    = "INITIALISING"
 
