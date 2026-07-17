@@ -315,6 +315,10 @@ class HudCanvas(QWidget):
                 self._tgt_halo  = random.uniform(48, 68)
             self._last_t = now
 
+        sp = 0.38 if self.speaking else 0.15
+        self._scale += (self._tgt_scale - self._scale) * sp
+        self._halo  += (self._tgt_halo  - self._halo)  * sp
+
 
        
 
