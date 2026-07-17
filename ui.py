@@ -281,6 +281,25 @@ class HudCanvas(QWidget):
         self._tmr.timeout.connect(self._step)
         self._tmr.start(16)
 
+
+    def _load_face(self, path: str):
+        try:
+            from PIL import Image, ImageDraw
+            import io
+            img = Image.open(path).convert("RGBA")
+            sz  = min(img.size)
+            img = img.resize((sz, sz), Image.LANCZOS)
+            mk  = Image.new("L", (sz, sz), 0)
+            ImageDraw.Draw(mk).ellipse((2, 2, sz - 2, sz - 2), fill=255)
+            img.putalpha(mk)
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            px = QPixmap(); px.loadFromData(buf.getvalue())
+            self._face_px = px
+        except Exception:
+            self._face_px = None
+
+
   def _step(self):
         self._tick += 1
         now = time.time()
