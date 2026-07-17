@@ -261,6 +261,26 @@ class HudCanvas(QWidget):
         self.muted    = False
         self.speaking = False
         self.state    = "INITIALISING"
+ self._tick       = 0
+        self._scale      = 1.0
+        self._tgt_scale  = 1.0
+        self._halo       = 55.0
+        self._tgt_halo   = 55.0
+        self._last_t     = time.time()
+        self._scan       = 0.0
+        self._scan2      = 180.0
+        self._rings      = [0.0, 120.0, 240.0]
+        self._pulses: list[float] = [0.0, 50.0, 100.0]
+        self._blink      = True
+        self._blink_tick = 0
+        self._particles: list[list[float]] = []
+        self._face_px: QPixmap | None = None
+        self._load_face(face_path)
+
+        self._tmr = QTimer(self)
+        self._tmr.timeout.connect(self._step)
+        self._tmr.start(16)
+
 
 
        
