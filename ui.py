@@ -249,8 +249,19 @@ class _SysMetrics:
                 "tmp": self.tmp,
             }
 
+_metrics = _SysMetrics()
+
+class HudCanvas(QWidget):
+    def __init__(self, face_path: str, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
+        self.setMinimumSize(300, 300)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self.muted    = False
         self.speaking = False
         self.state    = "INITIALISING"
+
+
+       
 
