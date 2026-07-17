@@ -281,6 +281,20 @@ class HudCanvas(QWidget):
         self._tmr.timeout.connect(self._step)
         self._tmr.start(16)
 
+  def _step(self):
+        self._tick += 1
+        now = time.time()
+        if now - self._last_t > (0.12 if self.speaking else 0.5):
+            if self.speaking:
+                self._tgt_scale = random.uniform(1.06, 1.14)
+                self._tgt_halo  = random.uniform(145, 190)
+            elif self.muted:
+                self._tgt_scale = random.uniform(0.998, 1.002)
+                self._tgt_halo  = random.uniform(15, 28)
+            else:
+                self._tgt_scale = random.uniform(1.001, 1.008)
+                self._tgt_halo  = random.uniform(48, 68)
+            self._last_t = now
 
 
        
