@@ -318,6 +318,20 @@ class HudCanvas(QWidget):
         sp = 0.38 if self.speaking else 0.15
         self._scale += (self._tgt_scale - self._scale) * sp
         self._halo  += (self._tgt_halo  - self._halo)  * sp
+      
+        speeds = [1.3, -0.9, 2.0] if self.speaking else [0.55, -0.35, 0.9]
+        for i, spd in enumerate(speeds):
+            self._rings[i] = (self._rings[i] + spd) % 360
+
+        self._scan  = (self._scan  + (3.0 if self.speaking else 1.3)) % 360
+        self._scan2 = (self._scan2 + (-2.0 if self.speaking else -0.75)) % 360
+
+        fw  = min(self.width(), self.height())
+        lim = fw * 0.74
+        spd = 4.2 if self.speaking else 2.0
+        self._pulses = [r + spd for r in self._pulses if r + spd < lim]
+        if len(self._pulses) < 3 and random.random() < (0.07 if self.speaking else 0.025):
+            self._pulses.append(0.0)
 
 
        
