@@ -378,6 +378,17 @@ class HudCanvas(QWidget):
             p.setPen(QPen(col, 1.5)); p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawEllipse(QRectF(cx - r, cy - r, r * 2, r * 2))
 
+        
+        # pulse rings  banauna.
+        for pr in self._pulses:
+            a   = max(0, int(230 * (1.0 - pr / (fw * 0.74))))
+            col = qcol(C.MUTED_C if self.muted else C.PRI, a)
+            p.setPen(QPen(col, 1.5)); p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawEllipse(QRectF(cx - pr, cy - pr, pr * 2, pr * 2))
+
+
+        
+
              
         # spinning arc rings banauna ko lagi
         for idx, (r_frac, w_r, arc_l, gap) in enumerate(
