@@ -343,5 +343,20 @@ class HudCanvas(QWidget):
             ])
 
 
-       
+        self._blink_tick += 1
+        if self._blink_tick >= 38:
+            self._blink = not self._blink
+            self._blink_tick = 0
+        self.update()
+
+    def paintEvent(self, _):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.fillRect(self.rect(), qcol(C.BG))
+
+        W, H = self.width(), self.height()
+        cx, cy = W / 2, H / 2
+        fw = min(W, H)
+
+
 
