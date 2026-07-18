@@ -362,5 +362,12 @@ class HudCanvas(QWidget):
         cx, cy = W / 2, H / 2
         fw = min(W, H)
 
+        # grid dots ko lagi.
+        p.setPen(QPen(qcol(C.PRI_GHO), 1))
+        for x in range(0, W, 48):
+            for y in range(0, H, 48):
+                p.drawPoint(x, y)
+
+        r_face = fw * 0.31
 
 
