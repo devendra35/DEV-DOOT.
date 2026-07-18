@@ -378,5 +378,20 @@ class HudCanvas(QWidget):
             p.setPen(QPen(col, 1.5)); p.setBrush(Qt.BrushStyle.NoBrush)
             p.drawEllipse(QRectF(cx - r, cy - r, r * 2, r * 2))
 
+             
+        # spinning arc rings banauna ko lagi
+        for idx, (r_frac, w_r, arc_l, gap) in enumerate(
+            [(0.48, 3, 115, 78), (0.40, 2, 78, 55), (0.32, 1, 56, 40)]
+        ):
+            ring_r = fw * r_frac
+            base   = self._rings[idx]
+            a_val  = max(0, min(255, int(self._halo * (1.0 - idx * 0.18))))
+            col    = qcol(C.MUTED_C if self.muted else C.PRI, a_val)
+            p.setPen(QPen(col, w_r)); p.setBrush(Qt.BrushStyle.NoBrush)
+            angle = base
+            rect  = QRectF(cx - ring_r, cy - ring_r, ring_r * 2, ring_r * 2)
+            while angle < base + 360:
+                p.drawArc(rect, int(angle * 16), int(arc_l * 16))
+                angle += arc_l + gap
 
 
