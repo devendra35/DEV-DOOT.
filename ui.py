@@ -341,7 +341,11 @@ class HudCanvas(QWidget):
                 math.cos(ang) * random.uniform(0.9, 2.4),
                 math.sin(ang) * random.uniform(0.9, 2.4) - 0.4, 1.0,
             ])
-
+            
+ self._particles = [
+            [p[0]+p[2], p[1]+p[3], p[2]*0.97, p[3]*0.97, p[4]-0.028]
+            for p in self._particles if p[4] > 0
+        ]
 
         self._blink_tick += 1
         if self._blink_tick >= 38:
