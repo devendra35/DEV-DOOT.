@@ -369,5 +369,14 @@ class HudCanvas(QWidget):
                 p.drawPoint(x, y)
 
         r_face = fw * 0.31
+          # halo glow ko part
+        for i in range(10):
+            r   = r_face * (1.8 - i * 0.08)
+            frc = 1.0 - i / 10
+            a   = max(0, min(255, int(self._halo * 0.085 * frc)))
+            col = qcol(C.MUTED_C if self.muted else C.PRI, a)
+            p.setPen(QPen(col, 1.5)); p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawEllipse(QRectF(cx - r, cy - r, r * 2, r * 2))
+
 
 
