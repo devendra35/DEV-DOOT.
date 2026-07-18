@@ -405,4 +405,68 @@ class HudCanvas(QWidget):
                 p.drawArc(rect, int(angle * 16), int(arc_l * 16))
                 angle += arc_l + gap
 
+        # scanners
+        sr = fw * 0.50
+        sa = min(255, int(self._halo * 1.5))
+        ex = 75 if self.speaking else 44
+        p.setPen(QPen(qcol(C.MUTED_C if self.muted else C.PRI, sa), 2.5))
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        srect = QRectF(cx - sr, cy - sr, sr * 2, sr * 2)
+        p.drawArc(srect, int(self._scan * 16), int(ex * 16))
+        p.setPen(QPen(qcol(C.ACC, sa // 2), 1.5))
+        p.drawArc(srect, int(self._scan2 * 16), int(ex * 16))
+
+        # tick marks
+        t_out, t_in = fw * 0.497, fw * 0.474
+        p.setPen(QPen(qcol(C.PRI, 140), 1))
+        for deg in range(0, 360, 10):
+            rad = math.radians(deg)
+            inn = t_in if deg % 30 == 0 else t_in + 6
+            p.drawLine(
+                QPointF(cx + t_out * math.cos(rad), cy - t_out * math.sin(rad)),
+                QPointF(cx + inn  * math.cos(rad), cy - inn  * math.sin(rad)),
+            )
+
+        # crosshair
+        ch_r, gap_h = fw * 0.51, fw * 0.16
+        p.setPen(QPen(qcol(C.PRI, int(self._halo * 0.5)), 1))
+        p.drawLine(QPointF(cx - ch_r, cy), QPointF(cx - gap_h, cy))
+        p.drawLine(QPointF(cx + gap_h, cy), QPointF(cx + ch_r, cy))
+        p.drawLine(QPointF(cx, cy - ch_r), QPointF(cx, cy - gap_h))
+        p.drawLine(QPointF(cx, cy + gap_h), QPointF(cx, cy + ch_r))
+
+        # corner brackets
+        bl = 24
+        bc = qcol(C.PRI, 210)
+        hl, hr = cx - fw // 2, cx + fw // 2
+        ht, hb = cy - fw // 2, cy + fw // 2
+        p.setPen(QPen(bc, 2))
+        for bx, by, dx, dy in [(hl,ht,1,1),(hr,ht,-1,1),(hl,hb,1,-1),(hr,hb,-1,-1)]:
+            p.drawLine(QPointF(bx, by), QPointF(bx + dx * bl, by))
+            p.drawLine(QPointF(bx, by), QPointF(bx, by + dy * bl))
+
+        # face
+        if self._face_px:
+            fsz    = int(fw * 0.62 * self._scale)
+            scaled = self._face_px.scaled(
+                fsz, fsz,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            p.drawPixmap(int(cx - fsz / 2), int(cy - fsz / 2), scaled)
+        else:
+            orb_r = int(fw * 0.27 * self._scale)
+            oc    = (200, 0, 50) if self.muted else (0, 60, 110)
+            for i in range(8, 0, -1):
+                r2  = int(orb_r * i / 8)
+                frc = i / 8
+                a   = max(0, min(255, int(self._halo * 1.1 * frc)))
+                p.setBrush(QBrush(QColor(int(oc[0]*frc), int(oc[1]*frc), int(oc[2]*frc), a)))
+                p.setPen(Qt.PenStyle.NoPen)
+                p.drawEllipse(QRectF(cx - r2, cy - r2, r2 * 2, r2 * 2))
+            p.setPen(QPen(qcol(C.PRI, min(255, int(self._halo * 2))), 1))
+            p.setFont(QFont("Courier New", 13, QFont.Weight.Bold))
+            p.drawText(QRectF(cx - 80, cy - 14, 160, 28),
+                       Qt.AlignmentFlag.AlignCenter, "D.E.V.D.O.O.T")
+
 
