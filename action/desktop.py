@@ -59,4 +59,26 @@ def _build_sandbox() -> dict:
         })(),
         "os_path": os.path,  
     }
+ if _PYAUTOGUI:
+        sandbox["pyautogui"] = pyautogui
 
+    if _OS == "Windows":
+        try:
+            import ctypes
+            import winreg
+            sandbox["ctypes"] = ctypes
+            sandbox["winreg"] = type("winreg", (), {
+                # Sadece okuma
+                "OpenKey":      winreg.OpenKey,
+                "QueryValueEx": winreg.QueryValueEx,
+                "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
+            })()
+        except ImportError:
+            pass
+
+    return sandbox
+
+
+def _execute_generated_code(code: str, player=None) -> str:
+    if not code or code.strip() == "UNSAFE":
+        return "This action cannot be performed safely."
