@@ -1,4 +1,15 @@
+import subprocess
+import sys
+import json
+import re
+import time
+from pathlib import Path
 
+
+def get_base_dir():
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path(__file__).resolve().parent.parent
 def _get_api_key() -> str:
     with open(API_CONFIG_PATH, "r", encoding="utf-8") as f:
         return json.load(f)["gemini_api_key"]
