@@ -248,3 +248,48 @@ def set_wallpaper_from_url(url: str) -> str:
     except Exception as e:
         return f"Could not download wallpaper: {e}"
 
+def get_current_wallpaper() -> str:
+    try:
+        if _OS == "Windows":
+            import winreg
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop"
+            )
+            val, _ = winreg.QueryValueEx(key, "Wallpaper")
+            winreg.CloseKey(key)
+            return f"Current wallpaper: {val}"
+
+        elif _OS == "Darwin":
+            script = (
+                'tell application "System Events" to get picture of desktop 1'
+            )
+            result = subprocess.run(
+                ["osascript", "-e", script],
+                capture_output=True, text=True
+            )
+            return f"Current wallpaper: {result.stdout.strip()}"
+
+        else:
+            desktop_env = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+            if "gnome" in desktop_env or "unity" in desktop_env:
+                result = subprocess.run(
+                    ["gsettings", "get", "org.gnome.desktop.background", "picture-uri"],
+                    capture_output=True, text=True
+                )
+                return f"Current wallpaper: {result.stdout.strip()}"
+            return "Wallpaper path retrieval not supported for this desktop environment."
+
+    except Exception as e:
+        return f"Could not get wallpaper: {e}"
+
+FILE_TYPE_MAP = {
+    "Images":      {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico", ".heic"},
+    "Documents":   {".pdf", ".doc", ".docx", ".txt", ".xls", ".xlsx",
+                    ".ppt", ".pptx", ".csv", ".odt", ".ods", ".odp"},
+    "Videos":      {".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v"},
+    "Music":       {".mp3", ".wav", ".flac", ".aac", ".ogg", ".wma", ".m4a"},
+    "Archives":    {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz"},
+    "Code":        {".py", ".js", ".ts", ".html", ".css", ".json", ".xml",
+                    ".cpp", ".java", ".cs", ".go", ".rs", ".sh", ".php"},
+    "Executables": {".exe", ".msi", ".bat", ".cmd", ".sh", ".appimage", ".deb", ".rpm"},
+}
