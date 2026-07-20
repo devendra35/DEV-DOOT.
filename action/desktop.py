@@ -342,5 +342,137 @@ def organize_desktop(mode: str = "by_type") -> str:
     if skipped:
         result += f"\n{len(skipped)} file(s) skipped (name conflict)."
     return result
+    
+def list_desktop() -> str:
+    desktop = _get_desktop()
+    items   = []
+    for item in sorted(desktop.iterdir()):
+        if item.name.startswith("."):
+            continue
+        if item.is_dir():
+            try:
+                count = len(list(item.iterdir()))
+            except PermissionError:
+                count = "?"
+            items.append(f"📁 {item.name}/ ({count} items)")
+        else:
+            size     = item.stat().st_size
+            size_str = (
+                f"{size / 1024:.1f} KB" if size < 1024 * 1024
+                else f"{size / 1024 / 1024:.1f} MB"
+            )
+            items.append(f"📄 {item.name} ({size_str})")
+
+    if not items:
+        return "Desktop is empty."
+    return f"Desktop ({len(items)} items):\n" + "\n".join(items)
+
+
+def clean_desktop() -> str:
+    desktop     = _get_desktop()
+    skip_exts   = _SKIP_EXTENSIONS.get(_OS, set())
+    today       = datetime.now().strftime("%Y-%m-%d")
+    archive_dir = desktop / f"Desktop Archive {today}"
+    archive_dir.mkdir(exist_ok=True)
+
+    moved = 0
+    for item in desktop.iterdir():
+        if item.is_dir() or item.name.startswith("."):
+            continue
+        if item.suffix.lower() in skip_exts:
+            continue
+        new_path = archive_dir / item.name
+        if not new_path.exists():
+            shutil.move(str(item), str(new_path))
+            moved += 1
+
+    return f"Desktop cleaned: {moved} files archived to '{archive_dir.name}'."
+
+
+def get_desktop_stats() -> str:
+    desktop    = _get_desktop()
+    files      = [i for i in desktop.iterdir() if i.is_file()]
+    folders    = [i for i in desktop.iterdir() if i.is_dir()]
+    total_size = sum(f.stat().st_size for f in files if f.exists())
+    size_str   = (
+        f"{total_size / 1024:.1f} KB" if total_size < 1024 * 1024
+        else f"{total_size / 1024 / 1024:.1f} MB"
+    )
+    return (
+        f"Desktop stats ({_OS}):\n"
+        f"  Files   : {len(files)}\n"
+        f"  Folders : {len(folders)}\n"
+        f"  Size    : {size_str}\n"
+        f"  Path    : {desktop}"
+    )
+
+def desktop_control(
+    parameters: dict = None,
+    response=None,
+    player=None,
+    session_memory=None,
+) -> str:
+    """
+    parameters:
+        action : wallpaper | wallpaper_url | current_wallpaper |
+                 organize  | clean | list | stats |
+                 task (AI-powered)
+        path   : image path for 'wallpaper'
+        url    : image URL for 'wallpaper_url'
+        mode   : 'by_type' or 'by_date' for 'organize'
+        task   : natural language description for AI-powered actions
+    """
+    params = parameters or {}
+    action = params.get("action", "").lower().strip()
+    task   = params.get("task", "").strip()
+
+    if player:
+        player.write_log(f"[desktop] {action or task[:40]}")
+
+    try:
+        if action == "wallpaper":
+            path = params.get("path", "")
+            return set_wallpaper(path) if path else "No image path provided."
+
+        elif action == "wallpaper_url":
+            url = params.get("url", "")
+            return set_wallpaper_from_url(url) if url else "No URL provided."
+
+        elif action == "current_wallpaper":
+            return get_current_wallpaper()
+
+        elif action == "organize":
+            return organize_desktop(params.get("mode", "by_type"))
+
+        elif action == "clean":
+            return clean_desktop()
+
+        elif action == "list":
+            return list_desktop()
+
+        elif action == "stats":
+            return get_desktop_stats()
+
+        elif action == "task" or task:
+            actual_task = task or params.get("description", "")
+            if not actual_task:
+                return "Please describe what you want to do on the desktop."
+
+            print(f"[Desktop] Asking Gemini: {actual_task}")
+            if player:
+                player.write_log("[Desktop] Generating action...")
+
+            code = _ask_gemini_for_desktop_action(actual_task)
+            return _execute_generated_code(code, player=player)
+
+        else:
+            if action:
+                code = _ask_gemini_for_desktop_action(action)
+                return _execute_generated_code(code, player=player)
+            return "No action or task specified."
+
+    except Exception as e:
+        print(f"[Desktop] Error: {e}")
+        return f"Desktop control error: {e}"
 
 
