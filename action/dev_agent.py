@@ -62,5 +62,28 @@ def _parse_traceback(output: str, project_files: list[str]) -> tuple[str | None,
                 return pf, int(line_str)
 
     return None, None
+    
+def _classify_error(output: str) -> str:
+
+    low = output.lower()
+
+    if any(x in low for x in ("no module named", "modulenotfounderror", "importerror")):
+        return "dependency_error"
+
+    if "syntaxerror" in low or "invalid syntax" in low:
+        return "syntax_error"
+    
+    if "cannot import" in low or "importerror" in low:
+        return "import_error"
+
+    if any(x in low for x in (
+        "traceback", "exception", "error:", "nameerror", "typeerror",
+        "attributeerror", "valueerror", "keyerror", "indexerror",
+        "zerodivisionerror", "filenotfounderror", "permissionerror",
+    )):
+        return "runtime_error"
+
+    return "none"
+
 
 
