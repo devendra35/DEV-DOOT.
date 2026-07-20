@@ -293,3 +293,54 @@ FILE_TYPE_MAP = {
                     ".cpp", ".java", ".cs", ".go", ".rs", ".sh", ".php"},
     "Executables": {".exe", ".msi", ".bat", ".cmd", ".sh", ".appimage", ".deb", ".rpm"},
 }
+
+_SKIP_EXTENSIONS = {
+    "Windows": {".lnk", ".url"},
+    "Darwin":  {".webloc"},
+    "Linux":   {".desktop"},
+}
+
+
+def organize_desktop(mode: str = "by_type") -> str:
+    desktop       = _get_desktop()
+    skip_exts     = _SKIP_EXTENSIONS.get(_OS, set())
+    moved, skipped = [], []
+
+    for item in desktop.iterdir():
+        if item.is_dir() or item.name.startswith("."):
+            continue
+        if item.suffix.lower() in skip_exts:
+            continue
+
+        if mode == "by_date":
+            mtime       = datetime.fromtimestamp(item.stat().st_mtime)
+            folder_name = mtime.strftime("%Y-%m")
+        else:
+            ext         = item.suffix.lower()
+            folder_name = "Others"
+            for folder, exts in FILE_TYPE_MAP.items():
+                if ext in exts:
+                    folder_name = folder
+                    break
+
+        target_dir = desktop / folder_name
+        target_dir.mkdir(exist_ok=True)
+        new_path = target_dir / item.name
+
+        if new_path.exists():
+            skipped.append(item.name)
+            continue
+
+        shutil.move(str(item), str(new_path))
+        moved.append(f"{item.name} → {folder_name}/")
+
+    result = f"Desktop organized ({mode}): {len(moved)} files moved."
+    if moved:
+        result += "\n" + "\n".join(moved[:8])
+        if len(moved) > 8:
+            result += f"\n... and {len(moved) - 8} more."
+    if skipped:
+        result += f"\n{len(skipped)} file(s) skipped (name conflict)."
+    return result
+
+
