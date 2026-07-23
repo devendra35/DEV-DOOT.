@@ -475,6 +475,29 @@ class HudCanvas(QWidget):
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(QBrush(qcol(C.PRI, a)))
             p.drawEllipse(QPointF(pt[0], pt[1]), 2.5, 2.5)
+  # status text
+        sy = cy + fw * 0.40
+        if self.muted:
+            txt, col = "⊘  MUTED",     qcol(C.MUTED_C)
+        elif self.speaking:
+            txt, col = "●  SPEAKING",  qcol(C.ACC)
+        elif self.state == "THINKING":
+            sym = "◈" if self._blink else "◇"
+            txt, col = f"{sym}  THINKING",   qcol(C.ACC2)
+        elif self.state == "PROCESSING":
+            sym = "▷" if self._blink else "▶"
+            txt, col = f"{sym}  PROCESSING", qcol(C.ACC2)
+        elif self.state == "LISTENING":
+            sym = "●" if self._blink else "○"
+            txt, col = f"{sym}  LISTENING",  qcol(C.GREEN)
+        else:
+            sym = "●" if self._blink else "○"
+            txt, col = f"{sym}  {self.state}", qcol(C.PRI)
 
+        p.setPen(QPen(col, 1))
+        p.setFont(QFont("Courier New", 11, QFont.Weight.Bold))
+        p.drawText(QRectF(0, sy, W, 26), Qt.AlignmentFlag.AlignCenter, txt)
+
+        
 
 
