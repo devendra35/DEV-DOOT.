@@ -468,5 +468,13 @@ class HudCanvas(QWidget):
             p.setFont(QFont("Courier New", 13, QFont.Weight.Bold))
             p.drawText(QRectF(cx - 80, cy - 14, 160, 28),
                        Qt.AlignmentFlag.AlignCenter, "D.E.V.D.O.O.T")
+            
+        # particles
+        for pt in self._particles:
+            a = max(0, min(255, int(pt[4] * 255)))
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QBrush(qcol(C.PRI, a)))
+            p.drawEllipse(QPointF(pt[0], pt[1]), 2.5, 2.5)
+
 
 
