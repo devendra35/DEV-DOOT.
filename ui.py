@@ -498,6 +498,19 @@ class HudCanvas(QWidget):
         p.setFont(QFont("Courier New", 11, QFont.Weight.Bold))
         p.drawText(QRectF(0, sy, W, 26), Qt.AlignmentFlag.AlignCenter, txt)
 
+
+class MetricBar(QWidget):
+
+    def __init__(self, label: str, color: str = C.PRI, parent=None):
+        super().__init__(parent)
+        self._label = label
+        self._color = color
+        self._value = 0.0       # 0–100
+        self._text  = "--"
+        self.setFixedHeight(38)
+        self.setMinimumWidth(80)
+
+
         
 
 
