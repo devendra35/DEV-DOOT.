@@ -498,6 +498,21 @@ class HudCanvas(QWidget):
         p.setFont(QFont("Courier New", 11, QFont.Weight.Bold))
         p.drawText(QRectF(0, sy, W, 26), Qt.AlignmentFlag.AlignCenter, txt)
 
+ # waveform
+        wy = sy + 30
+        N, bw = 36, 8
+        wx0 = (W - N * bw) / 2
+        for i in range(N):
+            if self.muted:
+                hgt, cl = 2, qcol(C.MUTED_C)
+            elif self.speaking:
+                hgt = random.randint(3, 20)
+                cl  = qcol(C.PRI) if hgt > 12 else qcol(C.PRI_DIM)
+            else:
+                hgt = int(3 + 2 * math.sin(self._tick * 0.09 + i * 0.6))
+                cl  = qcol(C.BORDER_B)
+            p.fillRect(QRectF(wx0 + i * bw, wy + 20 - hgt, bw - 1, hgt), cl)
+
 
 class MetricBar(QWidget):
 
