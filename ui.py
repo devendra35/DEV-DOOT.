@@ -567,6 +567,51 @@ class MetricBar(QWidget):
         p.setFont(QFont("Courier New", 9, QFont.Weight.Bold))
         p.setPen(QPen(bar_col if self._text != "--" else qcol(C.TEXT_DIM), 1))
         p.drawText(QRectF(0, 4, W - 6, 16), Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, self._text)
+        
+class LogWidget(QTextEdit):
+    _sig = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setReadOnly(True)
+        self.setFont(QFont("Courier New", 9))
+        self.setStyleSheet(f"""
+            QTextEdit {{
+                background: {C.PANEL};
+                color: {C.TEXT};
+                border: 1px solid {C.BORDER};
+                border-radius: 4px;
+                padding: 6px;
+                selection-background-color: {C.PRI_GHO};
+            }}
+            QScrollBar:vertical {{
+                background: {C.BG};
+                width: 8px;
+                border: none;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {C.BORDER_B};
+                border-radius: 4px;
+                min-height: 20px;
+            }}
+        """)
+        self._queue: list[str] = []
+        self._typing  = False
+        self._text    = ""
+        self._pos     = 0
+        self._tag     = "sys"
+        self._tmr = QTimer(self)
+        self._tmr.timeout.connect(self._step)
+        self._sig.connect(self._enqueue)
+
+    def append_log(self, text: str):
+        self._sig.emit(text)
+
+    def _enqueue(self, text: str):
+        self._queue.append(text)
+        if not self._typing:
+            self._next()
+
 
 
 
