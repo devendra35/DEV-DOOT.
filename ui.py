@@ -676,6 +676,16 @@ _EXT_TO_CAT = {
     **dict.fromkeys(["csv","tsv","json","xml"],                                  "data"),
 }
 
+def _file_category(path: Path) -> str:
+    return _EXT_TO_CAT.get(path.suffix.lower().lstrip("."), "unknown")
+
+def _fmt_size(size: int) -> str:
+    if   size < 1024:    return f"{size} B"
+    elif size < 1024**2: return f"{size/1024:.1f} KB"
+    elif size < 1024**3: return f"{size/1024**2:.1f} MB"
+    else:                return f"{size/1024**3:.1f} GB"
+
+
 
 
         
