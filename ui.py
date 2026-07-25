@@ -705,7 +705,26 @@ class FileDropZone(QWidget):
         layout.setSpacing(0)
         self._canvas = _DropCanvas(self)
         layout.addWidget(self._canvas)
+ def _animate(self):
+        self._dash_offset = (self._dash_offset + 0.8) % 20
+        self._canvas.update()
 
+    def dragEnterEvent(self, e: QDragEnterEvent):
+        if e.mimeData().hasUrls():
+            e.acceptProposedAction()
+            self._drag_over = True; self._canvas.update()
+
+    def dragLeaveEvent(self, e):
+        self._drag_over = False; self._canvas.update()
+
+    def dropEvent(self, e: QDropEvent):
+        self._drag_over = False
+        urls = e.mimeData().urls()
+        if urls:
+            path = urls[0].toLocalFile()
+            if Path(path).is_file():
+                self._set_file(path)
+        self._canvas.update()
 
 
 
