@@ -1,4 +1,4 @@
-
+#desktop.py
 import os
 import sys
 import json
@@ -15,7 +15,7 @@ try:
 except ImportError:
     _PYAUTOGUI = False
 
-_OS = platform.system()  # "Windows" | "Darwin" | "Linux" sabaii ma chalney gari implement gareko.
+_OS = platform.system()  # "Windows" | "Darwin" | "Linux"
 
 
 def _get_base_dir() -> Path:
@@ -26,7 +26,7 @@ def _get_base_dir() -> Path:
 def _get_api_key() -> str:
     path = _get_base_dir() / "config" / "api_keys.json"
     with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)["gemini_api_key"] #api key 
+        return json.load(f)["gemini_api_key"]
     
 def _get_desktop() -> Path:
     if _OS == "Linux":
@@ -37,7 +37,7 @@ def _get_desktop() -> Path:
 
 def _build_sandbox() -> dict:
     import time
-    
+
     safe_builtins = {
         "print": print,
         "len": len, "str": str, "int": int, "float": float,
@@ -59,7 +59,8 @@ def _build_sandbox() -> dict:
         })(),
         "os_path": os.path,  
     }
- if _PYAUTOGUI:
+
+    if _PYAUTOGUI:
         sandbox["pyautogui"] = pyautogui
 
     if _OS == "Windows":
@@ -68,7 +69,7 @@ def _build_sandbox() -> dict:
             import winreg
             sandbox["ctypes"] = ctypes
             sandbox["winreg"] = type("winreg", (), {
-            
+                # Sadece okuma
                 "OpenKey":      winreg.OpenKey,
                 "QueryValueEx": winreg.QueryValueEx,
                 "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
@@ -82,8 +83,8 @@ def _build_sandbox() -> dict:
 def _execute_generated_code(code: str, player=None) -> str:
     if not code or code.strip() == "UNSAFE":
         return "This action cannot be performed safely."
-        
 
+    # Kod temizleme
     if code.startswith("```"):
         lines = code.split("\n")
         code  = "\n".join(lines[1:-1]).strip()
@@ -98,6 +99,7 @@ def _execute_generated_code(code: str, player=None) -> str:
     except Exception as e:
         print(f"[Desktop] Exec error: {e}\nCode:\n{code[:300]}")
         return f"Execution error: {e}"
+
 
 def _ask_gemini_for_desktop_action(task: str) -> str:
 
@@ -139,7 +141,8 @@ Hard rules:
 Output ONLY the Python code. No explanation, no markdown, no backticks.
 
 Task: {task}"""
- try:
+
+    try:
         response = model.generate_content(prompt)
         code = response.text.strip()
         if code.startswith("```"):
@@ -248,6 +251,7 @@ def set_wallpaper_from_url(url: str) -> str:
     except Exception as e:
         return f"Could not download wallpaper: {e}"
 
+#baki
 def get_current_wallpaper() -> str:
     try:
         if _OS == "Windows":
@@ -342,7 +346,8 @@ def organize_desktop(mode: str = "by_type") -> str:
     if skipped:
         result += f"\n{len(skipped)} file(s) skipped (name conflict)."
     return result
-    
+
+
 def list_desktop() -> str:
     desktop = _get_desktop()
     items   = []
@@ -474,5 +479,3 @@ def desktop_control(
     except Exception as e:
         print(f"[Desktop] Error: {e}")
         return f"Desktop control error: {e}"
-
-
