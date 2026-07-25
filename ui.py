@@ -684,6 +684,27 @@ def _fmt_size(size: int) -> str:
     elif size < 1024**2: return f"{size/1024:.1f} KB"
     elif size < 1024**3: return f"{size/1024**2:.1f} MB"
     else:                return f"{size/1024**3:.1f} GB"
+        
+class FileDropZone(QWidget):
+    file_selected = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFixedHeight(100)
+        self._current_file: str | None = None
+        self._hovering  = False
+        self._drag_over = False
+        self._dash_offset = 0.0
+        self._anim_tmr = QTimer(self)
+        self._anim_tmr.timeout.connect(self._animate)
+        self._anim_tmr.start(40)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self._canvas = _DropCanvas(self)
+        layout.addWidget(self._canvas)
 
 
 
