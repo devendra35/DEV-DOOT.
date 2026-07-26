@@ -124,5 +124,52 @@ Return ONLY valid JSON — no markdown, no explanation:
   "dependencies": ["requests"]
 }}
 
+Critical rules:
+1. List files in DEPENDENCY ORDER — files with no imports come first, entry point comes last.
+2. The "imports" field must list every other project module this file imports (dot-notation, e.g. "utils.helpers").
+3. Keep it minimal — only files truly needed.
+4. Entry point must be in the files list.
+5. Use relative paths only (e.g. "utils/helpers.py", not absolute paths).
+6. Standard library modules (os, sys, json, etc.) do NOT go in "dependencies".
+
+JSON:"""
+
+    try:
+        response = model.generate_content(prompt)
+        raw = _strip_fences(response.text)
+        return json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Planner returned invalid JSON: {e}\nRaw: {response.text[:300]}")
+    except Exception as e:
+        if _is_rate_limit(e):
+            raise RateLimitError(str(e))
+        raise
+
+def _write_file(
+    file_info: dict,
+    project_description: str,
+    all_files: list[dict],
+    language: str,
+    project_dir: Path,
+    already_written: dict[str, str],
+) -> str:
+    model = _get_model(MODEL_WRITER)
+
+    file_path = file_info["path"]
+    file_desc = file_info.get("description", "")
+    file_imports = file_info.get("imports", [])
+
+    file_list = "\n".join(
+        f"  [{i+1}] {f['path']}: {f.get('description', '')}"
+        for i, f in enumerate(all_files)
+    )
+
+    dependency_context = ""
+    for dep_dotted in file_imports:
+        dep_path = dep_dotted.replace(".", "/") + ".py"
+        if dep_path in already_written:
+            code_snippet = already_written[dep_path][:2000]
+            dependency_context += f"\n\n--- {dep_path} (you must import from this) ---\n{code_snippet}"
+
 
 
