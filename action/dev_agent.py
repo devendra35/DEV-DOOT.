@@ -79,4 +79,50 @@ def _classify_error(output: str) -> str:
     return "none"
 
 
+def _has_error(output: str, run_command: str) -> bool:
+    
+    low = output.lower()
+
+    if "timed out" in low:
+        return False
+
+    if not output.strip():
+        return False
+
+    error_type = _classify_error(output)
+    return error_type != "none"
+
+class RateLimitError(Exception):
+    pass
+
+
+def _plan_project(description: str, language: str) -> dict:
+    model = _get_model(MODEL_PLANNER)
+
+    prompt = f"""You are a senior software architect. Create a minimal, complete file plan for this project.
+
+Language: {language}
+Description: {description}
+
+Return ONLY valid JSON — no markdown, no explanation:
+{{
+  "project_name": "snake_case_name",
+  "entry_point": "main.py",
+  "files": [
+    {{
+      "path": "main.py",
+      "description": "Entry point — what it does and which modules it imports",
+      "imports": ["utils.helpers", "core.engine"]
+    }},
+    {{
+      "path": "utils/helpers.py",
+      "description": "Helper utilities — what functions it exposes",
+      "imports": []
+    }}
+  ],
+  "run_command": "python main.py",
+  "dependencies": ["requests"]
+}}
+
+
 
