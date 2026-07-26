@@ -171,5 +171,37 @@ def _write_file(
             code_snippet = already_written[dep_path][:2000]
             dependency_context += f"\n\n--- {dep_path} (you must import from this) ---\n{code_snippet}"
 
+    lang_rules = ""
+    if language.lower() == "python":
+        lang_rules = """
+Python-specific rules:
+- Use type hints for all function signatures.
+- Add docstrings for all public functions and classes.
+- Use if __name__ == "__main__": guard in the entry point.
+- For relative imports within the project, use: from utils.helpers import foo  (match the project structure exactly).
+- Do NOT use implicit relative imports (from . import ...) unless it's a proper package with __init__.py.
+- If this is a package subdirectory, create __init__.py files where needed."""
+    elif language.lower() in ("javascript", "typescript", "js", "ts"):
+        lang_rules = """
+JS/TS-specific rules:
+- Use ES modules (import/export), not CommonJS (require).
+- Add JSDoc comments for all exported functions.
+- Handle promise rejections with try/catch in async functions."""
+
+    prompt = f"""You are a senior {language} developer writing production-quality code for a real project.
+
+Project goal: {project_description}
+
+Complete project file structure (in dependency order):
+{file_list}
+
+{f"Dependencies this file must import from other project files:{dependency_context}" if dependency_context else ""}
+
+Your task: Write the complete, working code for: {file_path}
+Purpose of this file: {file_desc}
+{f"This file imports from: {', '.join(file_imports)}" if file_imports else "This file has no project-internal imports."}
+
+{lang_rules}
+
 
 
