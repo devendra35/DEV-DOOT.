@@ -61,7 +61,7 @@ def _open_url(url: str) -> None:
         else:
             subprocess.Popen(["cmd", "/c", "start", "", url], shell=False)
     except Exception as e:
-        print(f"[YouTube] ⚠️ open_url failed: {e}")
+        print(f"[YouTube]  open_url failed: {e}")
 
 def _scrape_first_video_url(query: str) -> str | None:
 
@@ -79,5 +79,81 @@ def _scrape_first_video_url(query: str) -> str | None:
         html = r.text
 
         video_ids = re.findall(r'"videoId":"([A-Za-z0-9_-]{11})"', html)
+        
+        seen = set()
+        for vid in video_ids:
+            if vid in seen:
+                continue
+            seen.add(vid)
+
+            if f'/shorts/{vid}' in html:
+                continue
+            return f"https://www.youtube.com/watch?v={vid}"
+
+    except Exception as e:
+        print(f"[YouTube]  scrape_first_video_url failed: {e}")
+
+    return None
+
+def _extract_video_id(url: str) -> str | None:
+    match = re.search(
+        r"(?:v=|\/v\/|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})", url
+    )
+    return match.group(1) if match else None
+
+
+def _is_valid_youtube_url(url: str) -> bool:
+    return bool(re.search(r"(youtube\.com|youtu\.be)", url or ""))
+
+
+def _ask_for_url(prompt_text: str = "YouTube video URL:") -> str | None:
+    try:
+        import tkinter as tk
+        from tkinter import simpledialog
+
+        root = tk._default_root
+        if root is None:
+            root = tk.Tk()
+            root.withdraw()
+
+        url = simpledialog.askstring("J.A.R.V.I.S", prompt_text, parent=root)
+        return url.strip() if url else None
+    except Exception as e:
+        print(f"[YouTube]  URL dialog failed: {e}")
+        return None
+
+
+def _get_transcript(video_id: str) -> str | None:
+    if not _TRANSCRIPT_OK:
+        return None
+    try:
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        transcript      = None
+
+        lang_priority = ["en", "tr", "de", "fr", "es", "it", "pt", "ru", "ja", "ko", "ar", "zh"]
+
+        try:
+            transcript = transcript_list.find_manually_created_transcript(lang_priority)
+        except Exception:
+            pass
+
+        if transcript is None:
+            try:
+                transcript = transcript_list.find_generated_transcript(lang_priority)
+            except Exception:
+                for t in transcript_list:
+                    transcript = t
+                    break
+
+        if transcript is None:
+            return None
+
+        fetched = transcript.fetch()
+        return " ".join(entry["text"] for entry in fetched)
+
+    except Exception as e:
+        print(f"[YouTube]  Transcript fetch failed: {e}")
+        return None
+
 
 
