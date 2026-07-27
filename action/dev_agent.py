@@ -425,9 +425,143 @@ Fixed code for {fix_path}:"""
         except Exception as e:
             if _is_rate_limit(e):
                 raise RateLimitError(str(e))
-            print(f"[DevAgent] ⚠️ Could not fix {fix_path}: {e}")
+            print(f"[DevAgent]  Could not fix {fix_path}: {e}")
 
     return updated_codes
+    
+def _build_project(
+    description: str,
+    language: str,
+    project_name: str,
+    timeout: int,
+    speak=None,
+    player=None,
+) -> str:
+
+    def log(msg: str):
+        print(f"[DevAgent] {msg}")
+        if player:
+            player.write_log(f"[DevAgent] {msg}")
+
+    log("Planning project structure...")
+    try:
+        plan = _plan_project(description, language)
+    except RateLimitError:
+        msg = "Rate limit reached, sir. Please try again in a moment."
+        if speak: speak(msg)
+        return msg
+    except ValueError as e:
+        msg = f"Planning failed: {e}"
+        if speak: speak(msg)
+        return msg
+
+    proj_name    = project_name or plan.get("project_name", "jarvis_project")
+    proj_name    = re.sub(r"[^\w\-]", "_", proj_name)
+    project_dir  = PROJECTS_DIR / proj_name
+    project_dir.mkdir(parents=True, exist_ok=True)
+
+    files        = plan.get("files", [])
+    entry_point  = plan.get("entry_point", "main.py")
+    run_command  = plan.get("run_command", f"python {entry_point}")
+    dependencies = plan.get("dependencies", [])
+
+    log(f"Project: {proj_name} | Files: {len(files)} | Entry: {entry_point}")
+
+    def _dep_sort_key(fi: dict) -> int:
+        return len(fi.get("imports", []))
+
+    sorted_files = sorted(files, key=_dep_sort_key)
+
+    file_codes: dict[str, str] = {}
+
+    for file_info in sorted_files:
+        file_path = file_info.get("path", "")
+        if not file_path:
+            continue
+
+        log(f"Writing {file_path}...")
+        for attempt in range(2):
+            try:
+                code = _write_file(
+                    file_info=file_info,
+                    project_description=description,
+                    all_files=files,
+                    language=language,
+                    project_dir=project_dir,
+                    already_written=file_codes,
+                )
+                file_codes[file_path] = code
+                time.sleep(0.4)
+                break
+            except RateLimitError:
+                if attempt == 0:
+                    log("Rate limit — waiting 20s...")
+                    time.sleep(20)
+                else:
+                    log(f"Rate limit retry failed for {file_path}, skipping.")
+            except Exception as e:
+                log(f"Failed to write {file_path}: {e}")
+                break
+
+    if not file_codes:
+        msg = "I could not write any project files, sir."
+        if speak: speak(msg)
+        return msg
+
+    if dependencies:
+        install_result = _install_dependencies(dependencies, project_dir)
+        log(install_result)
+
+    _open_vscode(project_dir)
+
+    last_output   = ""
+    auto_installs = 0  
+
+    for attempt in range(1, MAX_FIX_ATTEMPTS + 1):
+        log(f"Running project (attempt {attempt}/{MAX_FIX_ATTEMPTS})...")
+        last_output = _run_project(run_command, project_dir, timeout)
+        log(f"Output preview: {last_output[:150]}")
+
+        if not _has_error(last_output, run_command):
+            msg = (
+                f"Project '{proj_name}' is working, sir. "
+                f"Built in {attempt} attempt{'s' if attempt > 1 else ''}. "
+                f"Saved to: {project_dir}"
+            )
+            if speak: speak(msg)
+            return f"{msg}\n\nOutput:\n{last_output}"
+
+        if attempt == MAX_FIX_ATTEMPTS:
+            break
+
+        error_type = _classify_error(last_output)
+        if error_type == "dependency_error" and auto_installs < 3:
+            installed = _try_auto_install(last_output, project_dir)
+            if installed:
+                auto_installs += 1
+                log("Missing dependency installed, retrying...")
+                time.sleep(1)
+                continue
+
+        log(f"Fixing errors (type: {error_type})...")
+        try:
+            updated = _fix_files(
+                error_output=last_output,
+                project_description=description,
+                all_files=files,
+                file_codes=file_codes,
+                language=language,
+                project_dir=project_dir,
+                entry_point=entry_point,
+            )
+            file_codes.update(updated)
+            time.sleep(1)
+        except RateLimitError:
+            msg = "Rate limit reached during fix. Project saved, check it manually in VSCode."
+            if speak: speak(msg)
+            return msg
+        except Exception as e:
+            log(f"Fix step failed: {e}")
 
 
 
