@@ -203,5 +203,232 @@ Purpose of this file: {file_desc}
 
 {lang_rules}
 
+General rules:
+- Output ONLY raw code. Absolutely no explanation, no markdown, no triple backticks.
+- Write COMPLETE, RUNNABLE code — no placeholders, no "# TODO", no "pass" stubs.
+- Every import must either be from the standard library, listed dependencies, or the project files shown above.
+- Match import paths EXACTLY to the file paths in the project structure (e.g. if file is "utils/helpers.py", import as "from utils.helpers import ...").
+- Use proper error handling (try/except) where I/O or network calls are made.
+- The code must work correctly when the project entry point is run from the project root directory.
+
+Code for {file_path}:"""
+
+    try:
+        response = model.generate_content(prompt)
+        code = _strip_fences(response.text)
+
+        full_path = project_dir / file_path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        full_path.write_text(code, encoding="utf-8")
+
+        print(f"[DevAgent] ✅ Written: {file_path} ({len(code)} chars)")
+        return code
+
+    except Exception as e:
+        if _is_rate_limit(e):
+            raise RateLimitError(str(e))
+        raise
+
+def _install_dependencies(dependencies: list[str], project_dir: Path) -> str:
+    if not dependencies:
+        return "No external dependencies."
+
+    to_install = []
+    for dep in dependencies:
+        pkg_name = re.split(r"[>=<!]", dep)[0].strip()
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "show", pkg_name],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            to_install.append(dep)
+        else:
+            print(f"[DevAgent] ✓ Already installed: {pkg_name}")
+
+    if not to_install:
+        return f"All dependencies already installed: {', '.join(dependencies)}"
+
+    print(f"[DevAgent] 📦 Installing: {to_install}")
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install"] + to_install,
+            capture_output=True, text=True,
+            encoding="utf-8", errors="replace",
+            timeout=120, cwd=str(project_dir)
+        )
+        if result.returncode == 0:
+            return f"Installed: {', '.join(to_install)}"
+        return f"Install warning (non-fatal): {result.stderr[:200]}"
+    except subprocess.TimeoutExpired:
+        return "Dependency install timed out (non-fatal)."
+    except Exception as e:
+        return f"Install error (non-fatal): {e}"
+
+def _open_vscode(project_dir: Path) -> bool:
+    vscode_candidates = [
+        "code",
+        rf"C:\Users\{Path.home().name}\AppData\Local\Programs\Microsoft VS Code\bin\code.cmd",
+        r"C:\Program Files\Microsoft VS Code\bin\code.cmd",
+    ]
+    for cmd in vscode_candidates:
+        try:
+            subprocess.Popen(
+                [cmd, str(project_dir)],
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            time.sleep(1.5)
+            print(f"[DevAgent] 💻 VSCode opened: {project_dir}")
+            return True
+        except Exception:
+            continue
+    return False
+
+def _run_project(run_command: str, project_dir: Path, timeout: int = 30) -> str:
+    print(f"[DevAgent] 🚀 Running: {run_command}")
+    try:
+        parts = run_command.split()
+        if parts[0].lower() == "python":
+            parts[0] = sys.executable
+
+        result = subprocess.run(
+            parts,
+            capture_output=True, text=True,
+            encoding="utf-8", errors="replace",
+            timeout=timeout,
+            cwd=str(project_dir)
+        )
+
+        stdout = result.stdout.strip()
+        stderr = result.stderr.strip()
+
+        combined_parts = []
+        if stdout:
+            combined_parts.append(f"STDOUT:\n{stdout}")
+        if stderr:
+            combined_parts.append(f"STDERR:\n{stderr}")
+
+        return "\n\n".join(combined_parts) if combined_parts else "Ran with no output."
+
+    except subprocess.TimeoutExpired:
+        return f"Timed out after {timeout}s — long-running app (server/GUI) is likely working."
+    except FileNotFoundError as e:
+        return f"Command not found: {e}"
+    except Exception as e:
+        return f"Run error: {e}"
+
+def _try_auto_install(error_output: str, project_dir: Path) -> bool:
+    """ModuleNotFoundError varsa eksik paketi otomatik kurmaya çalışır."""
+    pattern = re.compile(
+        r"No module named ['\"]([a-zA-Z0-9_\-\.]+)['\"]", re.IGNORECASE
+    )
+    match = pattern.search(error_output)
+    if not match:
+        return False
+
+    pkg = match.group(1).replace("_", "-").split(".")[0]
+    print(f"[DevAgent] 🔧 Auto-installing missing package: {pkg}")
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", pkg],
+            capture_output=True, text=True,
+            encoding="utf-8", errors="replace",
+            timeout=60, cwd=str(project_dir)
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+def _fix_files(
+    error_output: str,
+    project_description: str,
+    all_files: list[dict],
+    file_codes: dict[str, str],
+    language: str,
+    project_dir: Path,
+    entry_point: str,
+) -> dict[str, str]:
+
+    model = _get_model(MODEL_PLANNER)
+
+    error_file, error_line = _parse_traceback(error_output, list(file_codes.keys()))
+    error_type = _classify_error(error_output)
+
+    files_to_fix: list[str] = []
+
+    if error_file:
+        files_to_fix.append(error_file)
+        if error_type == "import_error":
+            for fi in all_files:
+                if error_file.replace("/", ".").replace(".py", "") in fi.get("imports", []):
+                    p = fi["path"]
+                    if p not in files_to_fix:
+                        files_to_fix.append(p)
+    else:
+        files_to_fix.append(entry_point)
+
+    updated_codes: dict[str, str] = {}
+
+    for fix_path in files_to_fix:
+        current_code = file_codes.get(fix_path, "")
+
+        other_ctx = ""
+        for fp, code in file_codes.items():
+            if fp != fix_path and code:
+                snippet = code[:1500] + ("..." if len(code) > 1500 else "")
+                other_ctx += f"\n--- {fp} ---\n{snippet}\n"
+
+        line_hint = f"\nError appears to be near line {error_line} in this file." if (
+            error_line and fix_path == error_file
+        ) else ""
+
+        prompt = f"""You are an expert {language} debugger. Fix the broken file below.
+
+Project goal: {project_description}
+
+All project files:
+{chr(10).join(f"  - {f['path']}: {f.get('description', '')}" for f in all_files)}
+
+Other files for context (read-only — fix only the target file):
+{other_ctx[:3500]}
+
+File to fix: {fix_path}{line_hint}
+Error type: {error_type}
+
+Error output:
+{error_output[:2500]}
+
+Current (broken) code:
+{current_code}
+
+Rules:
+- Output ONLY the complete fixed code. No explanation, no markdown, no backticks.
+- Fix ALL errors visible in the error output.
+- Keep all existing correct logic — do not remove working features.
+- Ensure import paths match the actual project file structure exactly.
+- Do NOT introduce new bugs or remove error handling.
+
+Fixed code for {fix_path}:"""
+
+        try:
+            response = model.generate_content(prompt)
+            fixed = _strip_fences(response.text)
+
+            full_path = project_dir / fix_path
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_text(fixed, encoding="utf-8")
+
+            updated_codes[fix_path] = fixed
+            print(f"[DevAgent] 🔧 Fixed: {fix_path}")
+
+        except Exception as e:
+            if _is_rate_limit(e):
+                raise RateLimitError(str(e))
+            print(f"[DevAgent] ⚠️ Could not fix {fix_path}: {e}")
+
+    return updated_codes
+
+
 
 
