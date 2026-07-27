@@ -562,6 +562,38 @@ def _build_project(
             return msg
         except Exception as e:
             log(f"Fix step failed: {e}")
+             msg = (
+        f"I couldn't fully fix '{proj_name}' after {MAX_FIX_ATTEMPTS} attempts, sir. "
+        f"Project is saved at {project_dir} — open it in VSCode and check manually."
+    )
+    if speak: speak(msg)
+    return f"{msg}\n\nLast error:\n{last_output[:600]}"
+
+
+def dev_agent(
+    parameters: dict,
+    response=None,
+    player=None,
+    session_memory=None,
+    speak=None,
+) -> str:
+    p            = parameters or {}
+    description  = p.get("description", "").strip()
+    language     = p.get("language", "python").strip()
+    project_name = p.get("project_name", "").strip()
+    timeout      = int(p.get("timeout", 30))
+
+    if not description:
+        return "Please describe the project you want me to build, sir."
+
+    return _build_project(
+        description  = description,
+        language     = language,
+        project_name = project_name,
+        timeout      = timeout,
+        speak        = speak,
+        player       = player,
+    )
 
 
 
