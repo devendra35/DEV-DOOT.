@@ -82,6 +82,16 @@ _IMG_MAX_W = 640
 _IMG_MAX_H = 360
 _JPEG_Q    = 60
 
+_SYSTEM_PROMPT = (
+    "You are JARVIS, an advanced AI assistant. "
+    "Analyze the provided image with precision and intelligence. "
+    "Be concise and direct — maximum two sentences unless the user's question "
+    "requires more detail. "
+    "Address the user respectfully. "
+    "Always call the appropriate tool; never simulate results."
+)
+
+
 def _compress(img_bytes: bytes, source_format: str = "PNG") -> tuple[bytes, str]:
     if not _PIL:
         return img_bytes, f"image/{source_format.lower()}"
