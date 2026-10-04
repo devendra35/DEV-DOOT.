@@ -387,3 +387,55 @@ def screen_process(
     player=None,
     session_memory=None,
 ) -> bool:
+     params    = parameters or {}
+    user_text = (params.get("text") or params.get("user_text") or "").strip()
+    angle     = params.get("angle", "screen").lower().strip()
+
+    if not user_text:
+        print("[Vision] ⚠️  No question provided — aborting")
+        return False
+
+    print(f"[Vision] ▶ angle={angle!r}  question='{user_text[:80]}'")
+
+    try:
+        _ensure_session(player=player)
+    except Exception as e:
+        print(f"[Vision] ❌ Could not start session: {e}")
+        return False
+
+    try:
+        if angle == "camera":
+            image_bytes, mime_type = _capture_camera()
+            print(f"[Vision] 📷 Camera: {len(image_bytes):,} bytes")
+        else:
+            image_bytes, mime_type = _capture_screen()
+            print(f"[Vision] 🖥️  Screen: {len(image_bytes):,} bytes")
+    except Exception as e:
+        print(f"[Vision] ❌ Capture error: {e}")
+        return False
+
+    _session.analyze(image_bytes, mime_type, user_text)
+    return True
+
+
+def warmup_session(player=None) -> None:
+    try:
+        _ensure_session(player=player)
+    except Exception as e:
+        print(f"[Vision] ⚠️  Warmup failed: {e}")
+
+if __name__ == "__main__":
+    print("[TEST] screen_processor.py")
+    print("=" * 52)
+    mode = input("angle — screen / camera (default: screen): ").strip().lower() or "screen"
+    q    = input("Question (Enter = default): ").strip() or "What do you see? Be brief."
+
+    t0 = time.perf_counter()
+    warmup_session()
+    print(f"Session ready in {time.perf_counter()-t0:.2f}s\n")
+
+    t1 = time.perf_counter()
+    ok = screen_process({"angle": mode, "text": q})
+    print(f"Queued in {time.perf_counter()-t1:.3f}s — waiting for audio...")
+    time.sleep(10)
+    print("Done." if ok else "Failed.")
