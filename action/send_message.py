@@ -158,6 +158,105 @@ def _send_signal(receiver: str, message: str) -> str:
 
 def _send_discord(receiver: str, message: str) -> str:
     return _desktop_send("Discord", receiver, message)
+    
+    if not _open_browser_url("https://www.instagram.com/direct/new/"):
+        return "Could not open Instagram in browser."
+
+    _paste_text(receiver)
+    time.sleep(1.5)
+
+    pyautogui.press("down")
+    time.sleep(0.3)
+    pyautogui.press("enter")   
+    time.sleep(0.4)
+
+    for _ in range(4):
+        pyautogui.press("tab")
+        time.sleep(0.15)
+    pyautogui.press("enter")
+    time.sleep(2.0)
+
+    _paste_text(message)
+    time.sleep(0.2)
+    pyautogui.press("enter")
+    time.sleep(0.3)
+
+    return f"Message sent to {receiver} via Instagram."
+
+
+def _send_messenger(receiver: str, message: str) -> str:
+    _require_pyautogui()
+
+    if not _open_browser_url("https://www.messenger.com/"):
+        return "Could not open Messenger in browser."
+
+
+    _search_in_app(receiver)
+    time.sleep(0.5)
+    pyautogui.press("down")
+    time.sleep(0.3)
+    pyautogui.press("enter")
+    time.sleep(1.0)
+
+    _paste_text(message)
+    time.sleep(0.2)
+    pyautogui.press("enter")
+    time.sleep(0.3)
+
+    return f"Message sent to {receiver} via Messenger."
+
+_PLATFORM_MAP = [
+    ({"whatsapp", "wp", "wapp"},              _send_whatsapp),
+    ({"telegram", "tg"},                      _send_telegram),
+    ({"instagram", "ig", "insta"},            _send_instagram),
+    ({"signal"},                               _send_signal),
+    ({"discord"},                              _send_discord),
+    ({"messenger", "facebook", "fb"},         _send_messenger),
+]
+
+
+def _resolve_platform(platform_str: str):
+    key = platform_str.lower().strip()
+    for keywords, handler in _PLATFORM_MAP:
+        if any(k in key for k in keywords):
+            return handler
+    return lambda r, m: _desktop_send(platform_str.strip().title(), r, m)
+
+
+def send_message(
+    parameters: dict,
+    response=None,
+    player=None,
+    session_memory=None,
+) -> str:
+    params       = parameters or {}
+    receiver     = params.get("receiver", "").strip()
+    message_text = params.get("message_text", "").strip()
+    platform     = params.get("platform", "whatsapp").strip()
+
+    if not receiver:
+        return "Please specify a recipient."
+    if not message_text:
+        return "Please specify the message content."
+    if not _PYAUTOGUI:
+        return "PyAutoGUI is not installed — cannot control the desktop."
+
+    preview = message_text[:50] + ("…" if len(message_text) > 50 else "")
+    print(f"[SendMessage] 📨 {platform} → {receiver}: {preview}")
+    if player:
+        player.write_log(f"[msg] {platform} → {receiver}")
+
+    try:
+        handler = _resolve_platform(platform)
+        result  = handler(receiver, message_text)
+    except Exception as e:
+        result = f"Could not send message: {e}"
+
+    print(f"[SendMessage] {'✅' if 'sent' in result.lower() else '❌'} {result}")
+    if player:
+        player.write_log(f"[msg] {result}")
+
+    return result
 
 
 def _send_instagram(receiver: str, message: str) -> str:
