@@ -111,3 +111,55 @@ def _open_app(app_name: str) -> bool:
         print(f"[SendMessage] ⚠️ Could not open {app_name}: {e}")
         return False
 
+def _open_browser_url(url: str) -> bool:
+    import webbrowser
+    try:
+        webbrowser.open(url)
+        time.sleep(4.0) 
+        return True
+    except Exception as e:
+        print(f"[SendMessage] ⚠️ Could not open browser: {e}")
+        return False
+
+def _search_in_app(query: str) -> None:
+    _require_pyautogui()
+    os_name = _get_os()
+    search_hotkey = ("command", "f") if os_name == "mac" else ("ctrl", "f")
+
+    pyautogui.hotkey(*search_hotkey)
+    time.sleep(0.5)
+    _clear_and_paste(query)
+    time.sleep(1.0)
+
+def _desktop_send(app_name: str, receiver: str, message: str) -> str:
+    if not _open_app(app_name):
+        return f"Could not open {app_name}."
+
+    time.sleep(1.0)
+    _search_in_app(receiver)
+    pyautogui.press("enter")
+    time.sleep(0.8)
+
+    _paste_text(message)
+    time.sleep(0.2)
+    pyautogui.press("enter")
+    time.sleep(0.3)
+    return f"Message sent to {receiver} via {app_name}."
+
+def _send_whatsapp(receiver: str, message: str) -> str:
+    return _desktop_send("WhatsApp", receiver, message)
+
+def _send_telegram(receiver: str, message: str) -> str:
+    return _desktop_send("Telegram", receiver, message)
+
+def _send_signal(receiver: str, message: str) -> str:
+    return _desktop_send("Signal", receiver, message)
+
+
+def _send_discord(receiver: str, message: str) -> str:
+    return _desktop_send("Discord", receiver, message)
+
+
+def _send_instagram(receiver: str, message: str) -> str:
+    _require_pyautogui()
+
